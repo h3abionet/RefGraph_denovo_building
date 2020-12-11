@@ -78,12 +78,12 @@ if (params.assembler == "canu") {
 		file orig from orig_ch
 		
 		output:
-		file "${orig/Assembly/*}" into assembly_ch
+		file "*.contigs.fasta" into assembly_ch
 	 
 		script:	
 		"""
 		canu -p ${params.sample_prefix} \
-		 -d "$orig/Assembly/" \
+		 -d "${params.out_dir}/canu-out" \
 		 genomeSize=${params.genome_size} \
 		 gridOptions="--time=${params.time} --partition=${params.partition} \
 		 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
@@ -98,16 +98,16 @@ if (params.assembler == "canu") {
 	        publishDir "${params.out_dir}/canu-out/quast-out"
 
 	        input:
-	        file "${orig/Assembly/}*.contigs.fasta" from assembly_ch 
+	        file "*.contigs.fasta" from assembly_ch 
 	        file $ref_seq
 	        file $gen_ref
 
 	        Output:
-	        file "${orig/quast/}" into quast_ch
+	        file "${params.out_dir}/canu-out/quast-out/*" into quast_ch
 
 	        script:
 	        """""
-	        quast.py "${orig/Assembly/}*.contigs.fasta" \
+	        quast.py "*.contigs.fasta" \
 		       -r ${ref_seq} \
 		       -g ${gen_ref} \
 		       -o $orig/quast/ \
