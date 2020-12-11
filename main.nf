@@ -14,7 +14,7 @@ params.genome_large = true /*Default*/
 params.genome_type = true /*Default*/
 params.quast_options = false
 
-/*Prepare inpur*/
+/*Prepare input*/
 
 input_ch = Channel.fromPath("${params.data_dir}/*.bam")
 ref_seq = Channel.fromPath(params.ref_seq).tolist()
@@ -22,6 +22,7 @@ gen_ref = Channel.fromPath(params.gen_ref).tolist()
 
 
 //Validate inputs
+
 if ( params.data_dir == false) {
     exit 1, "Must specify path to directory containing bam files"
 }
@@ -54,13 +55,13 @@ process ExtractFastq {
     
     script:
     """
-	bedtools bamtofastq -i $input -fq “${input.baseName}.fq
-	"""
+    bedtools bamtofastq -i $input -fq "${input.baseName}.fq"
+    """
 }
 
 /* Run the canu genome assembler. A sample prefix, output directory and reference sequence 
    must be specified in the config file in order for canu to run. It will use default 
-   parameters beyond that but additional options can be set in teh .config file*/
+   parameters beyond that but additional options can be set in the .config file*/
  
 process runCanu {
     input:
@@ -71,13 +72,13 @@ process runCanu {
     file "${orig/Assembly/*}" into assembly_ch
   
     script:	
-	"""
+    """
     canu -p ${params.sample_prefix} \
-		-d “$orig/Assembly/” \
-		genomeSize=${params.genome_size} \
-        gridOptions="--time=${params.time} --partition=${params.partition} \
-        ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
-		${params.canu_options}	
+	 -d "$orig/Assembly/" \
+	 genomeSize=${params.genome_size} \
+	 gridOptions="--time=${params.time} --partition=${params.partition} \
+	 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
+	 ${params.canu_options}	
     """
 }
 
@@ -89,7 +90,7 @@ process quast {
     input:
     file "${orig/Assembly/}*.contigs.fasta" from assembly_ch 
     file $ref_seq
-	file $gen_ref
+    file $gen_ref
 	
     Output:
     file "${orig/quast/}" into quast_ch
@@ -100,8 +101,7 @@ process quast {
         -r ${ref_seq} \
         -g ${gen_ref} \
         -o $orig/quast/ \
-        -e \
-		${params.genome_large} ${params.genome_type} ${params.quast_options}
+	${params.genome_large} ${params.genome_type} ${params.quast_options}
     """""
 }
 
