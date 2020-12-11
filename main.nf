@@ -34,10 +34,10 @@ if ( params.genomeSize == false) {
     exit 1, "Please specify the size of your genome as <integer>[g,m,k] e.g. 2.8g"
 }
 if ( params.sample_prefix == false) {
-    exit 1, "Must specify path to directory containing bam files"
+    exit 1, "Must specify sample prefix"
 }
 if ( params.file_type == false) {
-    exit 1, "Must specify path to directory containing bam files"
+    exit 1, "Must specify file/data type e.g. -pacbio-hifi"
 }
 
 	
