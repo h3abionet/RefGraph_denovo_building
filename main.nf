@@ -1,6 +1,7 @@
 #!/usr/bin/env nextflow
 
 params.data_dir = false
+params.out_dir = false
 params.ref_seq = false
 params.gen_ref = false
 params.genomeSize = false
@@ -13,6 +14,8 @@ params.canu_options = false
 params.genome_large = true /*Default*/
 params.genome_type = true /*Default*/
 params.quast_options = false
+params.assembler = false
+params.no_cpus = false
 
 /*Prepare input*/
 
@@ -46,6 +49,8 @@ if ( params.file_type == false) {
 
 
 process ExtractFastq {
+    publishDir "${params.out_dir}/fastq-raw"
+	
     input:
     file input from input_ch
 
@@ -59,51 +64,133 @@ process ExtractFastq {
     """
 }
 
-/* Run the canu genome assembler. A sample prefix, output directory and reference sequence 
-   must be specified in the config file in order for canu to run. It will use default 
-   parameters beyond that but additional options can be set in the .config file*/
- 
-process runCanu {
-    input:
-    file "${input.baseName}.fq" from fastq_ch
-    file orig from orig_ch
-    
-	output:
-    file "${orig/Assembly/*}" into assembly_ch
-  
-    script:	
-    """
-    canu -p ${params.sample_prefix} \
-	 -d "$orig/Assembly/" \
-	 genomeSize=${params.genome_size} \
-	 gridOptions="--time=${params.time} --partition=${params.partition} \
-	 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
-	 ${params.canu_options}	
-    """
+if (params.assembler == "canu") {
+
+	/* Run the canu genome assembler. A sample prefix, output directory and reference sequence 
+	   must be specified in the config file in order for canu to run. It will use default 
+	   parameters beyond that but additional options can be set in the .config file*/
+	 
+	process runCanu {
+		publishDir "${params.out_dir}/canu-out"
+		
+		input:
+		file "${input.baseName}.fq" from fastq_ch
+		file orig from orig_ch
+		
+		output:
+		file "${orig/Assembly/*}" into assembly_ch
+	 
+		script:	
+		"""
+		canu -p ${params.sample_prefix} \
+		 -d "$orig/Assembly/" \
+		 genomeSize=${params.genome_size} \
+		 gridOptions="--time=${params.time} --partition=${params.partition} \
+		 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
+		 ${params.canu_options}	
+		"""
+	}
+	/* Run quast on the resulting assembly. Additional parameters may be added using the 
+	   config file. --large and --eukaryote is enabled by default. Please change this if 
+	   you do not want this enabled.*/
+
+	process quast {
+	        publishDir "${params.out_dir}/canu-out/quast-out"
+
+	        input:
+	        file "${orig/Assembly/}*.contigs.fasta" from assembly_ch 
+	        file $ref_seq
+	        file $gen_ref
+
+	        Output:
+	        file "${orig/quast/}" into quast_ch
+
+	        script:
+	        """""
+	        quast.py "${orig/Assembly/}*.contigs.fasta" \
+		       -r ${ref_seq} \
+		       -g ${gen_ref} \
+		       -o $orig/quast/ \
+		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
+	        """""
+	}
 }
 
-/* Run quast on the resulting assembly. Additional parameters may be added using the 
-   config file. --large and --eukaryote is enabled by default. Please change this if 
-   you do not want this enabled.*/
+else if (params.assembler == "hifiasm") {
 
-process quast {
-    input:
-    file "${orig/Assembly/}*.contigs.fasta" from assembly_ch 
-    file $ref_seq
-    file $gen_ref
+	/* will concatenate and zip fq files inro .fq.gz format required for hifiasm*/
+
+	process comp_fq {
+		publishDir "${params.out_dir}/fq_zip"
+		
+		input
+		file "${input.baseName}.fq" from fastq_ch
+		
+		output
+		file "$zipped" into zip_ch
+		
+		script
+		"""
+		#!/usr/bin/env bash
+		
+		for { name in ./*.fq; do {
+			if [[ "$name" = ([0-9][a-z]+)_.*(..)\.fq ]]; then
+			outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
+
+			cat "$name" >> "$outfile"
+			fi
+			}
+			then {
+			
+			gzip "$outfile" >> "$zipped"
+			}
+		}
+		"""
+		
+	}
+
+	/* will run the hifiasm assembler*/
+	/* run hifiasm for pacbio-hifi reads only!*/
 	
-    Output:
-    file "${orig/quast/}" into quast_ch
-    
-    Script:
-    """""
-    quast.py "${orig/Assembly/}*.contigs.fasta" \
-        -r ${ref_seq} \
-        -g ${gen_ref} \
-        -o $orig/quast/ \
-	${params.genome_large} ${params.genome_type} ${params.quast_options}
-    """""
+	process runhifi {
+		publishDir "${params.out_dir}/hifiasm"
+		
+		input:
+		file "$zipped" from zip_ch
+		
+		output:
+		file *p_ctg.gfa into contig_ch
+		
+		script:
+		"""
+		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} $zipped /*need to add t to to the list of parameters: specified number of cpus*/
+		"""
+	}
+	
+	process quast {
+	        publishDir "${params.out_dir}/hifiasm/quast-out"
+
+	        input:
+	        file *p_ctg.gfa into contig_ch
+	        file $ref_seq
+	        file $gen_ref
+
+	        Output:
+	        file "${params.out_dir}/hifiasm/quast-out/*" into quast_ch
+
+	        script:
+	        """""
+	        quast.py "${orig/Assembly/}*.contigs.fasta" \
+		       -r ${ref_seq} \
+		       -g ${gen_ref} \
+		       -o "${params.out_dir}/hifiasm/quast-out/" \
+		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
+	        """""
+	}
 }
+
+
+
 
 /* To add:
   * Need to add a loop script to allow this to run across multiple folders/files. 
