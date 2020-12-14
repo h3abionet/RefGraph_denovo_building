@@ -29,6 +29,9 @@ gen_ref = Channel.fromPath(params.gen_ref).tolist()
 if ( params.data_dir == false) {
     exit 1, "Must specify path to directory containing bam files"
 }
+if ( params.out_dir == false) {
+    exit 1, "Must specify path to output directory"
+}
 if ( params.ref_seq == false) {
     exit 1, "Must specify path to the reference sequence"
 }
@@ -75,7 +78,6 @@ if (params.assembler == "canu") {
 		
 		input:
 		file "${input.baseName}.fq" from fastq_ch
-		file orig from orig_ch
 		
 		output:
 		file "*.contigs.fasta" into assembly_ch
@@ -83,11 +85,11 @@ if (params.assembler == "canu") {
 		script:	
 		"""
 		canu -p ${params.sample_prefix} \
-		 -d "${params.out_dir}/canu-out" \
-		 genomeSize=${params.genome_size} \
-		 gridOptions="--time=${params.time} --partition=${params.partition} \
-		 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
-		 ${params.canu_options}	
+		     -d "${params.out_dir}/canu-out" \
+		     genomeSize=${params.genome_size} \
+		     gridOptions="--time=${params.time} --partition=${params.partition} \
+		     ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
+		     ${params.canu_options}	
 		"""
 	}
 	/* Run quast on the resulting assembly. Additional parameters may be added using the 
@@ -95,7 +97,7 @@ if (params.assembler == "canu") {
 	   you do not want this enabled.*/
 
 	process quast {
-	        publishDir "${params.out_dir}/canu-out/quast-out"
+	        publishDir "${params.out_dir}/quast-canu-out"
 
 	        input:
 	        file "*.contigs.fasta" from assembly_ch 
@@ -103,14 +105,14 @@ if (params.assembler == "canu") {
 	        file $gen_ref
 
 	        Output:
-	        file "${params.out_dir}/canu-out/quast-out/*" into quast_ch
+	        file "${params.out_dir}/quast-canu-out/*" into quastc_ch
 
 	        script:
 	        """""
 	        quast.py "*.contigs.fasta" \
 		       -r ${ref_seq} \
 		       -g ${gen_ref} \
-		       -o $orig/quast/ \
+		       -o ${params.out_dir}/quast-canu-out/ \
 		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
 	        """""
 	}
@@ -118,7 +120,7 @@ if (params.assembler == "canu") {
 
 else if (params.assembler == "hifiasm") {
 
-	/* will concatenate and zip fq files inro .fq.gz format required for hifiasm*/
+	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
 	process comp_fq {
 		publishDir "${params.out_dir}/fq_zip"
@@ -127,7 +129,7 @@ else if (params.assembler == "hifiasm") {
 		file "${input.baseName}.fq" from fastq_ch
 		
 		output
-		file "$zipped" into zip_ch
+		file "*.fq.gz" into zip_ch
 		
 		script
 		"""
@@ -142,7 +144,7 @@ else if (params.assembler == "hifiasm") {
 			}
 			then {
 			
-			gzip "$outfile" >> "$zipped"
+			gzip "$outfile"
 			}
 		}
 		"""
@@ -156,34 +158,34 @@ else if (params.assembler == "hifiasm") {
 		publishDir "${params.out_dir}/hifiasm"
 		
 		input:
-		file "$zipped" from zip_ch
+		file "*.fq.gz" from zip_ch
 		
 		output:
 		file *p_ctg.gfa into contig_ch
 		
 		script:
 		"""
-		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} $zipped /*need to add t to to the list of parameters: specified number of cpus*/
+		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz" /*need to add t to to the list of parameters: specified number of cpus*/
 		"""
 	}
 	
 	process quast {
-	        publishDir "${params.out_dir}/hifiasm/quast-out"
+	        publishDir "${params.out_dir}/quast-hifi-out"
 
 	        input:
-	        file *p_ctg.gfa into contig_ch
+	        file *p_ctg.gfa from contig_ch
 	        file $ref_seq
 	        file $gen_ref
 
 	        Output:
-	        file "${params.out_dir}/hifiasm/quast-out/*" into quast_ch
+	        file "${params.out_dir}/quast-hifi-out/*" into quasth_ch
 
 	        script:
 	        """""
-	        quast.py "${orig/Assembly/}*.contigs.fasta" \
+	        quast.py "*p_ctg.gfa" \
 		       -r ${ref_seq} \
 		       -g ${gen_ref} \
-		       -o "${params.out_dir}/hifiasm/quast-out/" \
+		       -o "${params.out_dir}/quast-hifi-out/" \
 		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
 	        """""
 	}
