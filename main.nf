@@ -143,7 +143,7 @@ else if (params.assembler == "hifiasm") {
 		"""
 	}
 	
-	process convert_gfa{
+	process convert_gfa {
 		publishDir "${params.out_dir}/hifiasm"
 			
 		input:
