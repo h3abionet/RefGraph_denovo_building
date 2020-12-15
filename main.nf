@@ -94,30 +94,7 @@ if (params.assembler == "canu") {
 		     ${params.canu_options}	
 		"""
 	}
-	/* Run quast on the resulting assembly. Additional parameters may be added using the 
-	   config file. --large and --eukaryote is enabled by default. Please change this if 
-	   you do not want this enabled.*/
-
-	process quast {
-	        publishDir "${params.out_dir}/quast-canu-out"
-
-	        input:
-	        file "*.contigs.fasta" from assembly_ch 
-	        file $ref_seq
-	        file $gen_ref
-
-	        Output:
-	        file "${params.out_dir}/quast-canu-out/*" into quastc_ch
-
-	        script:
-	        """""
-	        quast.py "*.contigs.fasta" \
-		       -r ${ref_seq} \
-		       -g ${gen_ref} \
-		       -o ${params.out_dir}/quast-canu-out/ \
-		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
-	        """""
-	}
+	
 }
 
 else if (params.assembler == "hifiasm") {
@@ -144,7 +121,6 @@ else if (params.assembler == "hifiasm") {
 			fi
 			}
 			then {
-			
 			gzip "$outfile"
 			}
 		}
@@ -152,7 +128,6 @@ else if (params.assembler == "hifiasm") {
 		
 	}
 
-	/* will run the hifiasm assembler*/
 	/* run hifiasm for pacbio-hifi reads only!*/
 	
 	process runhifi {
@@ -176,39 +151,44 @@ else if (params.assembler == "hifiasm") {
 			file *p_ctg.gfa from contig_ch
 			
 			output:
-			file *.fa into assembly_ch
+			file "*.fasta" into assembly_ch
 			
 			script:
 			""""
-			awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > ${params.sample_prefix}.fa
+			awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
 			""""
 	}
 	
+	/* 
 	
+	Add new de bruijn graph tool as an additional assembly option
 	
+	*/
+}
+	/* Run quast on the resulting assembly. Additional parameters may be added using the 
+		   config file. --large and --eukaryote is enabled by default. Please change this if 
+		   you do not want this enabled.*/
+
 	process quast {
-	        publishDir "${params.out_dir}/quast-hifi-out"
+	        publishDir "${params.out_dir}/quast-out"
 
 	        input:
-	        file *.fa from assembly_ch
+	        file "*.fasta" from assembly_ch 
 	        file $ref_seq
 	        file $gen_ref
 
 	        Output:
-	        file "${params.out_dir}/quast-hifi-out/*" into quasth_ch
+	        file "${params.out_dir}/quast-out/*" into quast_ch
 
 	        script:
 	        """""
-	        quast.py "*p_ctg.gfa" \
+	        quast.py "*.fasta" \
 		       -r ${ref_seq} \
 		       -g ${gen_ref} \
-		       -o "${params.out_dir}/quast-hifi-out/" \
+		       -o ${params.out_dir}/quast-out/ \
 		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
 	        """""
 	}
-}
-
-/* add new de bruijn graph tool as an additional assembly option*/
 
 
 
