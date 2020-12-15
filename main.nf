@@ -68,7 +68,7 @@ process ExtractFastq {
     """
 }
 
-if (params.assembler == "canu") {{
+if (params.assembler == "canu") {
 
 /* Run the canu genome assembler. A sample prefix, output directory and reference sequence 
 	must be specified in the config file in order for canu to run. It will use default 
@@ -159,11 +159,10 @@ else if (params.assembler == "hifiasm") {
 		""""
 	}
 }
-}
 
-	/*Run quast on the resulting assembly. Additional parameters may be added using the 
-	  config file. --large and --eukaryote is enabled by default. Please change this if 
-	  you do not want this enabled*/
+/* Run quast on the resulting assembly. Additional parameters may be added using the 
+ config file. --large and --eukaryote is enabled by default. Please change this if 
+ you do not want this enabled*/
 
 process quast {
 	publishDir "${params.out_dir}/quast-out"
