@@ -158,6 +158,7 @@ else if (params.assembler == "hifiasm") {
 		""""
 	}
 }
+}
 
 /* Run quast on the resulting assembly. Additional parameters may be added using the 
  config file. --large and --eukaryote is enabled by default. Please change this if 
