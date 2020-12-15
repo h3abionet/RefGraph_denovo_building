@@ -94,7 +94,6 @@ if (params.assembler == "canu") {
 		"""
 	}
 	
-}
 
 else if (params.assembler == "hifiasm") {
 
@@ -158,6 +157,7 @@ else if (params.assembler == "hifiasm") {
 		awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
 		""""
 	}
+}
 }
 
 /* Run quast on the resulting assembly. Additional parameters may be added using the 
