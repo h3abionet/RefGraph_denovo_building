@@ -95,7 +95,7 @@ if (params.assembler == "canu") {
 	}
 }	
 
-else if (params.assembler == "hifiasm") {
+else (params.assembler == "hifiasm") {
 
 	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
