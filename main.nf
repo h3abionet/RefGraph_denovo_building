@@ -14,7 +14,7 @@ params.canu_options = false
 params.genome_large = true /*Default*/
 params.genome_type = true /*Default*/
 params.quast_options = false
-params.assembler = false
+params.assembler = false /*Add new de bruijn graph tool as an additional assembly option*/
 params.no_cpus = false
 
 /*Prepare input*/
@@ -158,12 +158,11 @@ else if (params.assembler == "hifiasm") {
 		awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
 		""""
 	}
-	/* Add new de bruijn graph tool as an additional assembly option*/	
 }
 
 /*Run quast on the resulting assembly. Additional parameters may be added using the 
 config file. --large and --eukaryote is enabled by default. Please change this if 
-you do not want this enabled.*/
+you do not want this enabled*/
 
 process quast {
 	publishDir "${params.out_dir}/quast-out"
@@ -184,7 +183,7 @@ process quast {
 		-o ${params.out_dir}/quast-out/ \
 		${params.genome_large} ${params.genome_type} ${params.quast_options}
 	"""""
-	}
+}
 
 
 
