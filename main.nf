@@ -29,6 +29,9 @@ gen_ref = Channel.fromPath(params.gen_ref).tolist()
 if ( params.data_dir == false) {
     exit 1, "Must specify path to directory containing bam files"
 }
+if ( params.out_dir == false) {
+    exit 1, "Must specify path to output directory"
+}
 if ( params.ref_seq == false) {
     exit 1, "Must specify path to the reference sequence"
 }
@@ -51,7 +54,7 @@ if ( params.file_type == false) {
 process ExtractFastq {
     publishDir "${params.out_dir}/fastq-raw"
 	
-	input:
+    input:
     file input from input_ch
 
     output:
@@ -75,35 +78,58 @@ if (params.assembler == "canu") {
 		
 		input:
 		file "${input.baseName}.fq" from fastq_ch
-		file orig from orig_ch
 		
 		output:
-		file "${orig/Assembly/*}" into assembly_ch
-	  
+		file "*.contigs.fasta" into assembly_ch
+	 
 		script:	
 		"""
 		canu -p ${params.sample_prefix} \
-		 -d "$orig/Assembly/" \
-		 genomeSize=${params.genome_size} \
-		 gridOptions="--time=${params.time} --partition=${params.partition} \
-		 ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
-		 ${params.canu_options}	
+		     -d "${params.out_dir}/canu-out" \
+		     genomeSize=${params.genome_size} \
+		     gridOptions="--time=${params.time} --partition=${params.partition} \
+		     ${params.file_type} ${params.reads_corr} "${input.baseName}.fq"\
+		     ${params.canu_options}	
 		"""
+	}
+	/* Run quast on the resulting assembly. Additional parameters may be added using the 
+	   config file. --large and --eukaryote is enabled by default. Please change this if 
+	   you do not want this enabled.*/
+
+	process quast {
+	        publishDir "${params.out_dir}/quast-canu-out"
+
+	        input:
+	        file "*.contigs.fasta" from assembly_ch 
+	        file $ref_seq
+	        file $gen_ref
+
+	        Output:
+	        file "${params.out_dir}/quast-canu-out/*" into quastc_ch
+
+	        script:
+	        """""
+	        quast.py "*.contigs.fasta" \
+		       -r ${ref_seq} \
+		       -g ${gen_ref} \
+		       -o ${params.out_dir}/quast-canu-out/ \
+		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
+	        """""
 	}
 }
 
 else if (params.assembler == "hifiasm") {
 
-	/* will concatenate and zip fq files inro .fq.gz format required for hifiasm*/
+	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
-	process comp_fq{
+	process comp_fq {
 		publishDir "${params.out_dir}/fq_zip"
 		
 		input
 		file "${input.baseName}.fq" from fastq_ch
 		
 		output
-		file "$zipped" into zip_ch
+		file "*.fq.gz" into zip_ch
 		
 		script
 		"""
@@ -112,62 +138,60 @@ else if (params.assembler == "hifiasm") {
 		for { name in ./*.fq; do {
 			if [[ "$name" = ([0-9][a-z]+)_.*(..)\.fq ]]; then
 			outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
-
 			cat "$name" >> "$outfile"
 			fi
 			}
 			then {
 			
-			gzip "$outfile" >> "$zipped"
+			gzip "$outfile"
 			}
-		"""
 		}
+		"""
+		
 	}
 
 	/* will run the hifiasm assembler*/
 	/* run hifiasm for pacbio-hifi reads only!*/
 	
-	process runhifi{
+	process runhifi {
 		publishDir "${params.out_dir}/hifiasm"
 		
 		input:
-		file "$zipped" from zip_ch
+		file "*.fq.gz" from zip_ch
 		
 		output:
 		file *p_ctg.gfa into contig_ch
 		
 		script:
 		"""
-		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} $zipped /*need to add t to to the list of parameters: specified number of cpus*/
+		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz" /*need to add t to to the list of parameters: specified number of cpus*/
 		"""
+	}
+	
+	process quast {
+	        publishDir "${params.out_dir}/quast-hifi-out"
+
+	        input:
+	        file *p_ctg.gfa from contig_ch
+	        file $ref_seq
+	        file $gen_ref
+
+	        Output:
+	        file "${params.out_dir}/quast-hifi-out/*" into quasth_ch
+
+	        script:
+	        """""
+	        quast.py "*p_ctg.gfa" \
+		       -r ${ref_seq} \
+		       -g ${gen_ref} \
+		       -o "${params.out_dir}/quast-hifi-out/" \
+		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
+	        """""
 	}
 }
 
 
-/* Run quast on the resulting assembly. Additional parameters may be added using the 
-   config file. --large and --eukaryote is enabled by default. Please change this if 
-   you do not want this enabled.*/
 
-process quast {
-    publishDir "${params.out_dir}/quast-out"
-	
-	input:
-    file "${orig/Assembly/}*.contigs.fasta" from assembly_ch 
-    file $ref_seq
-    file $gen_ref
-	
-    Output:
-    file "${orig/quast/}" into quast_ch
-    
-    Script:
-    """""
-    quast.py "${orig/Assembly/}*.contigs.fasta" \
-        -r ${ref_seq} \
-        -g ${gen_ref} \
-        -o $orig/quast/ \
-	${params.genome_large} ${params.genome_type} ${params.quast_options}
-    """""
-}
 
 /* To add:
   * Need to add a loop script to allow this to run across multiple folders/files. 
