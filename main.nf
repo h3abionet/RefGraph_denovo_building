@@ -89,80 +89,82 @@ if (params.assembler == "canu") {
 		     ${params.canu_options}	
 		"""
 	}
-} else if (params.assembler == "hifiasm") {
+} 
 
-		/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
+if (params.assembler == "hifiasm") {
 
-		process cat_fq {
-			publishDir "${params.out_dir}/fq_cat"	
-			input:
-			file "${input.baseName}.fq" from fastq_ch
+	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
+
+	process cat_fq {
+		publishDir "${params.out_dir}/fq_cat"	
+		input:
+		file "${input.baseName}.fq" from fastq_ch
 				
-			output:
-			file "*.fq" into cat_ch
+		output:
+		file "*.fq" into cat_ch
 				
-			script:
-			"""
-			#!/usr/bin/env bash
+		script:
+		"""
+		#!/usr/bin/env bash
 				
-			for { name in ./*.fq; do {
-				if [[ "$name" = ([0-9][a-z]+)_.*(..)\.fq ]]; then
-				outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
-				cat "$name" >> "$outfile"
-				fi
-				}
+		for { name in ./*.fq; do {
+			if [[ "$name" = ([0-9][a-z]+)_.*(..)\.fq ]]; then
+			outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
+			cat "$name" >> "$outfile"
+			fi
 			}
-			"""	
 		}
+		"""	
+	}
 			
-		process zip_fq {
-			publishDir "${params.out_dir}/fq_zip"
+	process zip_fq {
+		publishDir "${params.out_dir}/fq_zip"
 				
-			input:
-			file "*.fq" from cat_ch
+		input:
+		file "*.fq" from cat_ch
 				
-			output:
-			file "*.fq.gz" into zip_ch
+		output:
+		file "*.fq.gz" into zip_ch
 				
-			script:
-			"""
-			#!/usr/bin/env bash
+		script:
+		"""
+		#!/usr/bin/env bash
 				
-			gzip "*.fq"
-			"""	
-		}
+		gzip "*.fq"
+		"""	
+	}
 
-		/* run hifiasm for pacbio-hifi reads only!*/
+	/* run hifiasm for pacbio-hifi reads only!*/
 			
-		process runhifi {
-			publishDir "${params.out_dir}/hifiasm"
-				
-			input:
-			file "*.fq.gz" from zip_ch
-				
-			output:
-			file "*p_ctg.gfa" into gfa_ch
-				
-			script:
-			"""
-			hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz"
-			"""
-		}
+	process runhifi {
+		publishDir "${params.out_dir}/hifiasm"
+			
+		input:
+		file "*.fq.gz" from zip_ch
+			
+		output:
+		file "*p_ctg.gfa" into gfa_ch
+			
+		script:
+		"""
+		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz"
+		"""
+	}
 		
-		process convert_gfa {
-			publishDir "${params.out_dir}/hifiasm/fasta"
+	process convert_gfa {
+		publishDir "${params.out_dir}/hifiasm/fasta"
 				
-			input:
-			file "*p_ctg.gfa" from gfa_ch
+		input:
+		file "*p_ctg.gfa" from gfa_ch
 				
-			output:
-			file "*p_ctg.fasta" into assembly_ch
+		output:
+		file "*p_ctg.fasta" into assembly_ch
 				
-			script:
-			""""
-			gfatools gfa2fa -s *p_ctg.gfa > *p_ctg.fasta
-			""""
-		}
+		script:
+		""""
+		gfatools gfa2fa -s *p_ctg.gfa > *p_ctg.fasta
+		""""
+	}
 } 
 
 /*Run quast*/
