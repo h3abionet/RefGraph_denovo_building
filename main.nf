@@ -132,11 +132,12 @@ else if (params.assembler == "hifiasm") {
 		
 		script:
 		"""
+		#!/usr/bin/env bash
+		
 		gzip "*.fq"
 		"""	
 	}
-	
-	
+
 
 	/* run hifiasm for pacbio-hifi reads only!*/
 	
@@ -156,13 +157,13 @@ else if (params.assembler == "hifiasm") {
 	}
 	
 	process convert_gfa {
-		publishDir "${params.out_dir}/hifiasm"
+		publishDir "${params.out_dir}/hifiasm/fasta"
 			
 		input:
 		file "*p_ctg.gfa" from gfa_ch
 			
 		output:
-		file "*.fasta" into assembly_ch
+		file "*p_ctg.fasta" into assembly_ch
 			
 		script:
 		""""
@@ -170,6 +171,7 @@ else if (params.assembler == "hifiasm") {
 		""""
 	}
 }
+
 
 /* Run quast on the resulting assembly. Additional parameters may be added using the 
  config file. --large and --eukaryote is enabled by default. Please change this if 
@@ -179,7 +181,7 @@ process quast {
 	publishDir "${params.out_dir}/quast-out"
 
 	input:
-	file *.fasta from assembly_ch 
+	file "*.fasta" from assembly_ch 
 	file $ref_seq
 	file $gen_ref
 
@@ -188,9 +190,9 @@ process quast {
 
 	script:
 	"""""
-	quast.py *.fasta \
-		-r ${ref_seq} \
-		-g ${gen_ref} \
+	quast.py "*.fasta" \
+		-r $ref_seq \
+		-g $gen_ref \
 		-o ${params.out_dir}/quast-out/ \
 		${params.genome_large} ${params.genome_type} ${params.quast_options}
 	"""""
