@@ -99,14 +99,13 @@ else if (params.assembler == "hifiasm") {
 
 	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
-	process comp_fq {
-		publishDir "${params.out_dir}/fq_zip"
+	process cat_fq {
 		
 		input:
 		file "${input.baseName}.fq" from fastq_ch
 		
 		output:
-		file "*.fq.gz" into zip_ch
+		file "*.fq" into cat_ch
 		
 		script:
 		"""
@@ -118,12 +117,26 @@ else if (params.assembler == "hifiasm") {
 			cat "$name" >> "$outfile"
 			fi
 			}
-		}
-		then {
-		gzip "$outfile"
-		}
+			}
 		"""	
 	}
+	
+	process zip_fq {
+		publishDir "${params.out_dir}/fq_zip"
+		
+		input:
+		file "*.fq" from cat_ch
+		
+		output:
+		file "*.fq.gz" into zip_ch
+		
+		script:
+		"""
+		gzip "*.fq"
+		"""	
+	}
+	
+	
 
 	/* run hifiasm for pacbio-hifi reads only!*/
 	
