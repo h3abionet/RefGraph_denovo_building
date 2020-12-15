@@ -164,7 +164,8 @@ else if (params.assembler == "hifiasm") {
 		
 		script:
 		"""
-		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz" /*need to add t to to the list of parameters: specified number of cpus*/
+		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz" /*need to add t to 
+to the list of parameters: specified number of cpus*/
 		"""
 	}
 	
