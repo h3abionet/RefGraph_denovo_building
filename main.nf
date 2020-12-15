@@ -69,10 +69,6 @@ process ExtractFastq {
 }
 
 if (params.assembler == "canu") {
-
-/* Run the canu genome assembler. A sample prefix, output directory and reference sequence 
-	must be specified in the config file in order for canu to run. It will use default 
-	parameters beyond that but additional options can be set in the .config file*/
 	 
 	process runCanu {
 		publishDir "${params.out_dir}/canu-out"
@@ -93,12 +89,12 @@ if (params.assembler == "canu") {
 		     ${params.canu_options}	
 		"""
 	}
-} 	else if (params.assembler == "hifiasm") {
+} else if (params.assembler == "hifiasm") {
 
 		/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
 		process cat_fq {
-				
+			publishDir "${params.out_dir}/fq_cat"	
 			input:
 			file "${input.baseName}.fq" from fastq_ch
 				
@@ -155,21 +151,19 @@ if (params.assembler == "canu") {
 		
 		process convert_gfa {
 			publishDir "${params.out_dir}/hifiasm/fasta"
-					
+				
 			input:
 			file "*p_ctg.gfa" from gfa_ch
-					
+				
 			output:
 			file "*p_ctg.fasta" into assembly_ch
-					
+				
 			script:
 			""""
 			gfatools gfa2fa -s *p_ctg.gfa > *p_ctg.fasta
 			""""
 		}
-	} else {
-	exit 1, "assemblers did not run, please check config file"
-}
+} 
 
 /*Run quast*/
 
