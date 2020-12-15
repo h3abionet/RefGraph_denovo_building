@@ -166,7 +166,7 @@ else if (params.assembler == "hifiasm") {
 			
 		script:
 		""""
-		awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
+		gfatools gfa2fa -s "*p_ctg.gfa" > "*p_ctg.fasta"
 		""""
 	}
 }
