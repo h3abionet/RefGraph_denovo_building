@@ -61,7 +61,6 @@ process ExtractFastq {
 
     output:
     file "${input.baseName}.fq" into fastq_ch
-    file "$input" into orig_ch
     
     script:
     """
@@ -134,10 +133,10 @@ else if (params.assembler == "hifiasm") {
 		publishDir "${params.out_dir}/hifiasm"
 		
 		input:
-		file "*.fq.gz" from zip_ch
+		file *.fq.gz from zip_ch
 		
 		output:
-		file *p_ctg.gfa into contig_ch
+		file *p_ctg.gfa into gfa_ch
 		
 		script:
 		"""
@@ -146,12 +145,13 @@ else if (params.assembler == "hifiasm") {
 	}
 	
 	process convert_gfa{
-	
+		publishDir "${params.out_dir}/hifiasm"
+			
 			input:
-			file *p_ctg.gfa from contig_ch
+			file *p_ctg.gfa from gfa_ch
 			
 			output:
-			file "*.fasta" into assembly_ch
+			file *.fasta into assembly_ch
 			
 			script:
 			""""
@@ -173,7 +173,7 @@ else if (params.assembler == "hifiasm") {
 	        publishDir "${params.out_dir}/quast-out"
 
 	        input:
-	        file "*.fasta" from assembly_ch 
+	        file *.fasta from assembly_ch 
 	        file $ref_seq
 	        file $gen_ref
 
@@ -182,7 +182,7 @@ else if (params.assembler == "hifiasm") {
 
 	        script:
 	        """""
-	        quast.py "*.fasta" \
+	        quast.py *.fasta \
 		       -r ${ref_seq} \
 		       -g ${gen_ref} \
 		       -o ${params.out_dir}/quast-out/ \
