@@ -45,7 +45,9 @@ if ( params.sample_prefix == false) {
 if ( params.file_type == false) {
     exit 1, "Must specify file/data type e.g. -pacbio-hifi"
 }
-
+if ( params.assembler == false) {
+    exit 1, "Must specify which assembler to use"
+}
 	
 		
 /* Extract fastq files from bam files*/
@@ -167,6 +169,7 @@ else if (params.assembler == "hifiasm") {
 		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz"
 		"""
 	}
+	/* Need to add a step that converts files from gfa to fq for quast to run*/
 	
 	process quast {
 	        publishDir "${params.out_dir}/quast-hifi-out"
@@ -190,6 +193,7 @@ else if (params.assembler == "hifiasm") {
 	}
 }
 
+/* add new de bruijn graph tool as an additional assembly option*/
 
 
 
@@ -200,3 +204,4 @@ else if (params.assembler == "hifiasm") {
   * We may also need to add an additional process to phase in haplotypes - currently
     the script builds a genome with many repeats resulting in an assembly much larger 
     than the reference*/
+
