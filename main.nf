@@ -169,13 +169,28 @@ else if (params.assembler == "hifiasm") {
 		hifiasm -o "${params.sample_prefix}_hifi.asm" -t ${params.no_cpus} "*.fq.gz"
 		"""
 	}
-	/* Need to add a step that converts files from gfa to fq for quast to run*/
+	
+	process convert_gfa{
+	
+			input:
+			file *p_ctg.gfa from contig_ch
+			
+			output:
+			file *.fa into assembly_ch
+			
+			script:
+			""""
+			awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > ${params.sample_prefix}.fa
+			""""
+	}
+	
+	
 	
 	process quast {
 	        publishDir "${params.out_dir}/quast-hifi-out"
 
 	        input:
-	        file *p_ctg.gfa from contig_ch
+	        file *.fa from assembly_ch
 	        file $ref_seq
 	        file $gen_ref
 
