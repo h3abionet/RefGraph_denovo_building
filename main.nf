@@ -93,7 +93,7 @@ if (params.assembler == "canu") {
 		     ${params.canu_options}	
 		"""
 	}
-	
+}	
 
 else if (params.assembler == "hifiasm") {
 
@@ -118,12 +118,11 @@ else if (params.assembler == "hifiasm") {
 			cat "$name" >> "$outfile"
 			fi
 			}
-			then {
-			gzip "$outfile"
-			}
 		}
-		"""
-		
+		then {
+		gzip "$outfile"
+		}
+		"""	
 	}
 
 	/* run hifiasm for pacbio-hifi reads only!*/
@@ -132,10 +131,10 @@ else if (params.assembler == "hifiasm") {
 		publishDir "${params.out_dir}/hifiasm"
 		
 		input:
-		file *.fq.gz from zip_ch
+		file "*.fq.gz" from zip_ch
 		
 		output:
-		file *p_ctg.gfa into gfa_ch
+		file "*p_ctg.gfa" into gfa_ch
 		
 		script:
 		"""
@@ -147,17 +146,16 @@ else if (params.assembler == "hifiasm") {
 		publishDir "${params.out_dir}/hifiasm"
 			
 		input:
-		file *p_ctg.gfa from gfa_ch
+		file "*p_ctg.gfa" from gfa_ch
 			
 		output:
-		file *.fasta into assembly_ch
+		file "*.fasta" into assembly_ch
 			
 		script:
 		""""
 		awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
 		""""
 	}
-}
 }
 
 /* Run quast on the resulting assembly. Additional parameters may be added using the 
