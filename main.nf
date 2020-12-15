@@ -103,13 +103,13 @@ else if (params.assembler == "hifiasm") {
 	process comp_fq {
 		publishDir "${params.out_dir}/fq_zip"
 		
-		input
+		input:
 		file "${input.baseName}.fq" from fastq_ch
 		
-		output
+		output:
 		file "*.fq.gz" into zip_ch
 		
-		script
+		script:
 		"""
 		#!/usr/bin/env bash
 		
@@ -147,47 +147,45 @@ else if (params.assembler == "hifiasm") {
 	process convert_gfa{
 		publishDir "${params.out_dir}/hifiasm"
 			
-			input:
-			file *p_ctg.gfa from gfa_ch
+		input:
+		file *p_ctg.gfa from gfa_ch
 			
-			output:
-			file *.fasta into assembly_ch
+		output:
+		file *.fasta into assembly_ch
 			
-			script:
-			""""
-			awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
-			""""
+		script:
+		""""
+		awk '/^S/{print ">"$2"\n"$3}' "*p_ctg.gfa" | fold > "${params.sample_prefix}.fasta"
+		""""
 	}
 	
-	/* 
 	
-	Add new de bruijn graph tool as an additional assembly option
+	/* Add new de bruijn graph tool as an additional assembly option*/
 	
-	*/
 }
-	/* Run quast on the resulting assembly. Additional parameters may be added using the 
+	/*Run quast on the resulting assembly. Additional parameters may be added using the 
 		   config file. --large and --eukaryote is enabled by default. Please change this if 
 		   you do not want this enabled.*/
 
-	process quast {
-	        publishDir "${params.out_dir}/quast-out"
+process quast {
+	    publishDir "${params.out_dir}/quast-out"
 
-	        input:
-	        file *.fasta from assembly_ch 
-	        file $ref_seq
-	        file $gen_ref
+	    input:
+	    file *.fasta from assembly_ch 
+	    file $ref_seq
+	    file $gen_ref
 
-	        Output:
-	        file "${params.out_dir}/quast-out/*" into quast_ch
+	    output:
+	    file "${params.out_dir}/quast-out/*" into quast_ch
 
-	        script:
-	        """""
-	        quast.py *.fasta \
-		       -r ${ref_seq} \
-		       -g ${gen_ref} \
-		       -o ${params.out_dir}/quast-out/ \
-		       ${params.genome_large} ${params.genome_type} ${params.quast_options}
-	        """""
+	    script:
+	    """""
+	    quast.py *.fasta \
+		     -r ${ref_seq} \
+		     -g ${gen_ref} \
+		     -o ${params.out_dir}/quast-out/ \
+		     ${params.genome_large} ${params.genome_type} ${params.quast_options}
+	    """""
 	}
 
 
