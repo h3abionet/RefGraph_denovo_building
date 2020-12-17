@@ -68,7 +68,7 @@ process ExtractFastq {
     """
 }
 
-if (params.assembler == "canu") {
+if(params.assembler == "canu") {
 	 
 	process runCanu {
 		publishDir "${params.out_dir}/canu-out"
@@ -89,9 +89,7 @@ if (params.assembler == "canu") {
 		     ${params.canu_options}	
 		"""
 	}
-} 
-
-else if (params.assembler == "hifiasm"){
+} else if(params.assembler == "hifiasm"){
 
 	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
@@ -165,7 +163,9 @@ else if (params.assembler == "hifiasm"){
 		""""
 		gfatools gfa2fa -s *.gfa > *.fa
 		""""
-	}
+	} else { 
+		 exit 1, "unknown error occured. please check the config file and resume run (-r)"
+}
 } 
 
 /*Run quast*/
