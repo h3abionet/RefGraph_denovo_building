@@ -109,10 +109,11 @@ else if (params.assembler == "hifiasm"){
 				
 		for { name in ./*.fq; do {
 			if [[ "$name" = ([a-z]+[0-9]+)_.*(..)\.fq ]]; then
-			outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
-			cat "$name" >> "$outfile"
+				outfile ="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
+				cat "$name" >> "$outfile"
 			fi
 			}
+		done
 		}
 		"""	
 	}
