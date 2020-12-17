@@ -91,7 +91,7 @@ if (params.assembler == "canu") {
 	}
 } 
 
-if (params.assembler == "hifiasm") {
+else if (params.assembler == "hifiasm"){
 
 	/* will concatenate and zip fq files into .fq.gz format required for hifiasm*/
 
@@ -108,7 +108,7 @@ if (params.assembler == "hifiasm") {
 		#!/usr/bin/env bash
 				
 		for { name in ./*.fq; do {
-			if [[ "$name" = ([0-9][a-z]+)_.*(..)\.fq ]]; then
+			if [[ "$name" = ([a-z]+[0-9]+)_.*(..)\.fq ]]; then
 			outfile="${BASH_REMATCH[1]}_${BASH_REMATCH[2]}.fq"
 			cat "$name" >> "$outfile"
 			fi
@@ -158,11 +158,11 @@ if (params.assembler == "hifiasm") {
 		file "*p_ctg.gfa" from gfa_ch
 				
 		output:
-		file "*p_ctg.fasta" into assembly_ch
+		file "*p_ctg.fa" into assembly_ch
 				
 		script:
 		""""
-		gfatools gfa2fa -s *p_ctg.gfa > *p_ctg.fasta
+		gfatools gfa2fa -s *.gfa > *.fa
 		""""
 	}
 } 
@@ -186,7 +186,7 @@ process run_quast {
 
 	script:
 	"""""
-	quast.py "*.fasta" \
+	quast.py "*.fa*" \
 		-r $ref_seq \
 		-g $gen_ref \
 		-o ${params.out_dir}/quast-out/ \
